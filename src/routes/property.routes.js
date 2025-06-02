@@ -7,10 +7,12 @@ import {
   deleteProperty,
   getPropertiesWithin,
   getPropertyStats,
-  uploadPropertyImages,
-  resizePropertyImages
-} from '../controllers/property.controller.js';
+} from '../controllers/property';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
+import {
+  uploadPropertyImages,
+  resizePropertyImages,
+} from '../middleware/upload/upload.middleware.js';
 import reviewRouter from './review.routes.js';
 
 const router = express.Router();

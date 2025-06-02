@@ -1,23 +1,15 @@
-import User from '../models/User.js';
-import AppError from '../utils/AppError.js';
-import catchAsync from '../utils/catchAsync.js';
-import { deleteFile } from '../utils/fileUpload.js';
+import User from '../../models/User.js';
+import AppError from '../../utils/AppError.js';
+import catchAsync from '../../utils/catchAsync.js';
+import { deleteFile } from '../../utils/fileUpload.js';
+import { filterObj } from '../../utils/objectUtils.js';
 
 /**
- * Filter object to only include allowed fields
+ * @desc    Get all users (admin only)
+ * @route   GET /api/v1/users
+ * @access  Private/Admin
  */
-const filterObj = (obj, ...allowedFields) => {
-  const newObj = {};
-  Object.keys(obj).forEach(el => {
-    if (allowedFields.includes(el)) newObj[el] = obj[el];
-  });
-  return newObj;
-};
-
-/**
- * Get all users (admin only)
- */
-export const getAllUsers = catchAsync(async (req, res, next) => {
+export const getAllUsers = catchAsync(async (req, res) => {
   const users = await User.find();
 
   res.status(200).json({
@@ -30,18 +22,12 @@ export const getAllUsers = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Get current user
- */
-export const getMe = (req, res, next) => {
-  req.params.id = req.user.id;
-  next();
-};
-
-/**
- * Get user by ID (admin only)
+ * @desc    Get user by ID
+ * @route   GET /api/v1/users/:id
+ * @access  Private/Admin
  */
 export const getUser = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
+  const user = req.userData || (await User.findById(req.params.id));
 
   if (!user) {
     return next(new AppError('No user found with that ID', 404));
@@ -56,13 +42,15 @@ export const getUser = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Update current user
+ * @desc    Update current user
+ * @route   PATCH /api/v1/users/update-me
+ * @access  Private
  */
 export const updateMe = catchAsync(async (req, res, next) => {
   // 1) Create error if user POSTs password data
   if (req.body.password || req.body.passwordConfirm) {
     return next(
-      new AppError('This route is not for password updates. Please use /updateMyPassword.', 400)
+      new AppError('This route is not for password updates. Please use /update-my-password.', 400)
     );
   }
 
@@ -84,9 +72,11 @@ export const updateMe = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Delete current user (set active to false)
+ * @desc    Delete current user (set active to false)
+ * @route   DELETE /api/v1/users/delete-me
+ * @access  Private
  */
-export const deleteMe = catchAsync(async (req, res, next) => {
+export const deleteMe = catchAsync(async (req, res) => {
   await User.findByIdAndUpdate(req.user.id, { active: false });
 
   res.status(204).json({
@@ -96,7 +86,9 @@ export const deleteMe = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Update user (admin only)
+ * @desc    Update user (admin only)
+ * @route   PATCH /api/v1/users/:id
+ * @access  Private/Admin
  */
 export const updateUser = catchAsync(async (req, res, next) => {
   // 1) Filter out unwanted fields that are not allowed to be updated
@@ -121,7 +113,9 @@ export const updateUser = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Delete user (admin only)
+ * @desc    Delete user (admin only)
+ * @route   DELETE /api/v1/users/:id
+ * @access  Private/Admin
  */
 export const deleteUser = catchAsync(async (req, res, next) => {
   const user = await User.findByIdAndDelete(req.params.id);
@@ -132,38 +126,11 @@ export const deleteUser = catchAsync(async (req, res, next) => {
 
   // Delete user photo if exists
   if (user.photo && user.photo !== 'default.jpg') {
-    deleteFile(user.photo);
+    deleteFile(`public/img/users/${user.photo}`);
   }
 
   res.status(204).json({
     status: 'success',
     data: null,
   });
-});
-
-/**
- * Upload user photo
- */
-export const uploadUserPhoto = (req, res, next) => {
-  if (!req.file) return next();
-
-  req.body.photo = req.file.filename;
-  next();
-};
-
-/**
- * Resize user photo
- */
-export const resizeUserPhoto = catchAsync(async (req, res, next) => {
-  if (!req.file) return next();
-
-  req.file.filename = `user-${req.user.id}-${Date.now()}.jpeg`;
-
-  await sharp(req.file.buffer)
-    .resize(500, 500)
-    .toFormat('jpeg')
-    .jpeg({ quality: 90 })
-    .toFile(`public/img/users/${req.file.filename}`);
-
-  next();
 });
