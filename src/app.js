@@ -32,6 +32,9 @@ const app = express();
 // Set security HTTP headers
 app.use(helmet());
 
+// Enable CORS for all routes
+app.use(cors());
+
 // Development logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -81,7 +84,16 @@ app.use((req, res, next) => {
 });
 
 // 3) ROUTES
+// Mount auth routes first to avoid conflicts
 app.use('/api/v1/auth', authRouter);
+
+// Redirect old email verification URLs for backward compatibility
+app.get('/api/v1/users/verify-email/:token', (req, res) => {
+  const { token } = req.params;
+  res.redirect(302, `/api/v1/auth/verify-email/${token}`);
+});
+
+// Mount other routes
 app.use('/api/v1/properties', propertyRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
