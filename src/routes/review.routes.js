@@ -1,13 +1,16 @@
 import express from 'express';
+import { protect, restrictTo } from '../middleware/auth.middleware.js';
 import {
   getAllReviews,
   createReview,
   deleteReview,
   updateReview,
+  getReview,
   setPropertyUserIds,
-  getReview
-} from '../controllers/review.controller.js';
-import { protect, restrictTo } from '../middleware/auth.middleware.js';
+  checkPropertyExists,
+  checkDuplicateReview,
+  checkReviewOwnership,
+} from '../controllers/review';
 
 const router = express.Router({ mergeParams: true });
 
@@ -19,23 +22,23 @@ router.get('/:id', getReview);
 router.use(protect);
 
 // Routes that require authentication
+// Create review route with all necessary middleware
 router.post(
   '/',
   restrictTo('user'),
   setPropertyUserIds,
+  checkPropertyExists,
+  checkDuplicateReview,
   createReview
 );
 
-router.patch(
-  '/:id',
-  restrictTo('user', 'admin'),
-  updateReview
-);
+// Update review route with ownership check
+router.patch('/:id', restrictTo('user', 'admin'), checkReviewOwnership, updateReview);
 
-router.delete(
-  '/:id',
-  restrictTo('user', 'admin'),
-  deleteReview
-);
+// Delete review route with ownership check
+router.delete('/:id', restrictTo('user', 'admin'), checkReviewOwnership, deleteReview);
+
+// Get single review route with ownership check for non-public access if needed
+router.get('/:id', getReview);
 
 export default router;
