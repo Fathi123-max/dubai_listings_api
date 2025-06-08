@@ -1,5 +1,5 @@
 ---
-trigger: manual
+trigger: always_on
 ---
 
 Project Rules and Guidelines for Dubai-Listings API
