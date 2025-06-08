@@ -1,5 +1,5 @@
 ---
-trigger: manual
+trigger: always_on
 ---
 
 Global Rules for Production-Ready Backend Development
